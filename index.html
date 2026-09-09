@@ -294,7 +294,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
 /* =========================================================================
    MODEL LIST
@@ -304,7 +304,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
    ========================================================================= */
 const MODELS = [
   {
-    file: 'models/model-01.glb',
+    file: 'models/model-01.fbx',
     name: 'นายธนพนธ์ เพ็ชร์เพ็ง',
     role: '3D ARTIST — HARD SURFACE',
     bio: `มีทักษะและความชอบด้านการสร้างโมเดล 3D ประเภท Hard Surface เช่น รถถัง เรือรบ และหุ่นยนต์
@@ -315,7 +315,7 @@ const MODELS = [
   }
   // ตัวอย่างการเพิ่มโมเดลที่ 2:
   // {
-  //   file: 'models/model-02.glb',
+  //   file: 'models/model-02.fbx',
   //   name: 'ชื่อผลงาน',
   //   role: 'หมวดหมู่ผลงาน',
   //   bio: 'คำอธิบายผลงาน...',
@@ -468,7 +468,7 @@ function buildPlaceholderTank(){
 }
 
 /* ---------- Model loading / switching ---------- */
-const loader = new GLTFLoader();
+const loader = new FBXLoader();
 const loadingEl = document.getElementById('loading');
 
 function clearCurrentModel(){
@@ -502,18 +502,34 @@ function loadModel(index){
 
   loader.load(
     data.file,
-    (gltf) => {
-      const model = gltf.scene;
-      model.traverse((obj) => { if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; } });
-      frameModel(model);
-      currentModel = model;
+    (object) => {
+      // FBXLoader คืนค่าเป็น Group มาเลย (ไม่มี .scene เหมือน glTF)
+      object.traverse((obj) => {
+        if (obj.isMesh) {
+          obj.castShadow = true;
+          obj.receiveShadow = true;
+          // FBX บางไฟล์มาพร้อมวัสดุที่ดำ/สว่างเกินไปเพราะแปลงมาจาก 3ds Max/Maya
+          // ปรับ roughness/metalness เริ่มต้นให้ดูเป็นโลหะมากขึ้นถ้าวัสดุยังเป็นค่า default
+          if (obj.material) {
+            const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+            mats.forEach((m) => {
+              if (m.isMeshStandardMaterial || m.isMeshPhongMaterial) {
+                if (m.metalness === undefined) m.metalness = 0.4;
+                if (m.roughness === undefined) m.roughness = 0.5;
+              }
+            });
+          }
+        }
+      });
+      frameModel(object);
+      currentModel = object;
       scene.add(currentModel);
       loadingEl.classList.add('hidden');
     },
     undefined,
-    () => {
+    (err) => {
       // ไม่พบไฟล์โมเดลจริง -> ใช้โมเดลต้นแบบ (placeholder) แทน
-      console.info(`[portfolio] ไม่พบไฟล์ "${data.file}" — แสดงโมเดลต้นแบบแทน วางไฟล์ .glb จริงไว้ที่พาธนี้เพื่อแสดงผลงานจริง`);
+      console.info(`[portfolio] ไม่พบไฟล์ "${data.file}" หรือโหลดไม่สำเร็จ — แสดงโมเดลต้นแบบแทน`, err);
       currentModel = buildPlaceholderTank();
       scene.add(currentModel);
       loadingEl.classList.add('hidden');
