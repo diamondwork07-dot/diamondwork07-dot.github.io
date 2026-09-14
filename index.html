@@ -302,8 +302,21 @@ const MODELS = [
   {
     file: 'models/model-02.fbx',
     targetSize: 7
+  },
+  {
+    file: 'models/model-03.fbx',
+    targetSize: 7
+  },
+  {
+    file: 'models/model-04.fbx',
+    targetSize: 7
+  },
+  {
+    file: 'models/model-05.fbx',
+    targetSize: 7
   }
-  // ตัวอย่างการเพิ่มโมเดลที่ 2:
+  // เพิ่มโมเดลใหม่ ๆ ต่อท้ายในรูปแบบเดียวกันได้เลย อย่าลืม comma คั่นระหว่างแต่ละอัน
+  // ใส่ name / role / bio / skills เพิ่มได้ถ้าต้องการให้แต่ละโมเดลมีคำอธิบายของตัวเอง เช่น:
   // {
   //   file: 'models/model-02.fbx',
   //   targetSize: 3.2,
@@ -482,7 +495,12 @@ function frameModel(object, targetSize = 3.2){
   const scaleFactor = targetSize / Math.max(size.x, size.y, size.z, 0.001);
   object.scale.setScalar(scaleFactor);
 
+  // จัดกึ่งกลางโมเดลใหม่ตามจุดศูนย์กลางจริงของ bounding box
+  // (แก้ปัญหาโมเดลที่ pivot ไม่ได้อยู่ตรงกลางในโปรแกรม 3D แล้วหลุดกรอบกล้องไป)
   const box2 = new THREE.Box3().setFromObject(object);
+  const center = box2.getCenter(new THREE.Vector3());
+  object.position.x -= center.x;
+  object.position.z -= center.z;
   object.position.y -= box2.min.y;
 }
 
