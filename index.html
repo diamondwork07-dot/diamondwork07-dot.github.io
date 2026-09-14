@@ -288,6 +288,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
    MODEL LIST
    เพิ่มโมเดลใหม่ได้โดยเพิ่ม object ใหม่ในอาเรย์นี้ แล้วปุ่ม ◀ ▶ จะทำงานให้เอง
    - file: พาธไปยังไฟล์ .fbx ของโมเดลจริง (วางไฟล์ไว้ในโฟลเดอร์ models/)
+   - name / role / bio / skills เป็นออปชัน ถ้าไม่ใส่จะไม่แสดงส่วนนั้นบนแผงข้อมูล (ไม่ทำให้พัง)
    - ถ้าโหลดไฟล์ไม่เจอ ระบบจะสร้างโมเดลรถถังต้นแบบ (placeholder) ให้แทนอัตโนมัติ
    ========================================================================= */
 const MODELS = [
@@ -296,12 +297,12 @@ const MODELS = [
     // targetSize = ขนาดที่โมเดลจะถูกปรับให้เท่ากันเสมอบนจอ (หน่วยเป็นเมตรสมมติของฉาก)
     // โค้ดจะ "รีสเกล" โมเดลให้พอดีขนาดนี้เสมอ ไม่ว่าจะปั้นมาตัวเล็กหรือใหญ่แค่ไหนในโปรแกรม 3D
     // ถ้าโมเดลดูเล็กไปให้เพิ่มค่านี้ ถ้าใหญ่ไปให้ลด (ค่าเริ่มต้น 3.2)
-    targetSize: 6,
-    
+    targetSize: 6
   }
   // ตัวอย่างการเพิ่มโมเดลที่ 2:
   // {
   //   file: 'models/model-02.fbx',
+  //   targetSize: 3.2,
   //   name: 'ชื่อผลงาน',
   //   role: 'หมวดหมู่ผลงาน',
   //   bio: 'คำอธิบายผลงาน...',
@@ -331,7 +332,6 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 
 // Studio-style environment map: ให้แสงฟุ้งกระจายเข้าโมเดลจากทุกทิศทางอย่างนุ่มนวล
-// ช่วยแก้ปัญหา "มืดเกินไป" โดยไม่ต้องเพิ่มไฟดวงใดดวงหนึ่งจนสว่างจ้าเฉพาะจุด
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
 scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
 
@@ -346,10 +346,7 @@ controls.autoRotate = true;
 controls.autoRotateSpeed = 0.8;
 controls.addEventListener('start', () => { controls.autoRotate = false; });
 
-/* ---------- Lighting ----------
-   หลักการ: ใช้ environment map (ด้านบน) เป็นแสงฟุ้งหลักที่ทำให้ทุกด้านของโมเดลมองเห็นได้
-   ไฟทางนี้มีหน้าที่แค่ "เสริม" ทิศทางและเงา ไม่ใช่แหล่งแสงหลัก จึงตั้งค่าไว้ไม่แรงมาก
------------------------------------- */
+/* ---------- Lighting ---------- */
 const hemi = new THREE.HemisphereLight(0x8a94a0, 0x1a1c1f, 1.4);
 scene.add(hemi);
 
@@ -404,7 +401,6 @@ function buildPlaceholderTank(){
   const metalMat = new THREE.MeshStandardMaterial({ color: 0x3d4247, metalness: 0.85, roughness: 0.3 });
   const amberMat = new THREE.MeshStandardMaterial({ color: 0xe2a13d, metalness: 0.2, roughness: 0.4, emissive: 0x5c3d14, emissiveIntensity: 0.5 });
 
-  // Hull
   const hull = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.6, 1.5), hullMat);
   hull.position.y = 0.55;
   hull.castShadow = true;
@@ -416,7 +412,6 @@ function buildPlaceholderTank(){
   hullFront.castShadow = true;
   group.add(hullFront);
 
-  // Turret
   const turret = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.42, 1.1), hullMat);
   turret.position.set(-0.15, 1.02, 0);
   turret.castShadow = true;
@@ -427,19 +422,16 @@ function buildPlaceholderTank(){
   turretTop.castShadow = true;
   group.add(turretTop);
 
-  // Barrel
   const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.07, 1.9, 12), metalMat);
   barrel.rotation.z = Math.PI / 2;
   barrel.position.set(1.15, 1.08, 0);
   barrel.castShadow = true;
   group.add(barrel);
 
-  // Antenna
   const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.1, 6), metalMat);
   antenna.position.set(-0.55, 1.7, 0.35);
   group.add(antenna);
 
-  // Tracks
   [1, -1].forEach((side) => {
     const track = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.55, 0.32), darkMat);
     track.position.set(0, 0.32, side * 0.78);
@@ -455,7 +447,6 @@ function buildPlaceholderTank(){
     }
   });
 
-  // Hazard accent stripe (industrial detailing)
   const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.4), amberMat);
   stripe.position.set(-0.85, 0.85, 0);
   group.add(stripe);
@@ -500,13 +491,10 @@ function loadModel(index){
   loader.load(
     data.file,
     (object) => {
-      // FBXLoader คืนค่าเป็น Group มาเลย (ไม่มี .scene เหมือน glTF)
       object.traverse((obj) => {
         if (obj.isMesh) {
           obj.castShadow = true;
           obj.receiveShadow = true;
-          // FBX บางไฟล์มาพร้อมวัสดุที่ดำ/สว่างเกินไปเพราะแปลงมาจาก 3ds Max/Maya
-          // ปรับ roughness/metalness เริ่มต้นให้ดูเป็นโลหะมากขึ้นถ้าวัสดุยังเป็นค่า default
           if (obj.material) {
             const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
             mats.forEach((m) => {
@@ -525,9 +513,9 @@ function loadModel(index){
     },
     undefined,
     (err) => {
-      // ไม่พบไฟล์โมเดลจริง -> ใช้โมเดลต้นแบบ (placeholder) แทน
       console.info(`[portfolio] ไม่พบไฟล์ "${data.file}" หรือโหลดไม่สำเร็จ — แสดงโมเดลต้นแบบแทน`, err);
       currentModel = buildPlaceholderTank();
+      frameModel(currentModel, data.targetSize);
       scene.add(currentModel);
       loadingEl.classList.add('hidden');
     }
@@ -537,30 +525,54 @@ function loadModel(index){
   updateNav();
 }
 
+/* updateInfoPanel: ปลอดภัยแม้ไม่มี element หรือไม่มีข้อมูลบางฟิลด์ (ไม่ทำให้สคริปต์พัง) */
 function updateInfoPanel(data){
-  document.getElementById('info-name').textContent = data.name;
-  document.getElementById('info-role').textContent = data.role;
-  document.getElementById('info-bio').textContent = data.bio.replace(/\s+/g, ' ').trim();
+  const nameEl = document.getElementById('info-name');
+  if (nameEl && data.name) nameEl.textContent = data.name;
+
+  const roleEl = document.getElementById('info-role');
+  if (roleEl){
+    if (data.role) { roleEl.textContent = data.role; roleEl.style.display = ''; }
+    else { roleEl.style.display = 'none'; }
+  }
+
+  const bioEl = document.getElementById('info-bio');
+  if (bioEl){
+    if (data.bio) { bioEl.textContent = String(data.bio).replace(/\s+/g, ' ').trim(); bioEl.style.display = ''; }
+    else { bioEl.style.display = 'none'; }
+  }
+
   const skillsEl = document.getElementById('info-skills');
-  skillsEl.innerHTML = '';
-  data.skills.forEach((s) => {
-    const li = document.createElement('li');
-    li.textContent = s;
-    skillsEl.appendChild(li);
-  });
+  if (skillsEl){
+    if (Array.isArray(data.skills) && data.skills.length){
+      skillsEl.innerHTML = '';
+      data.skills.forEach((s) => {
+        const li = document.createElement('li');
+        li.textContent = s;
+        skillsEl.appendChild(li);
+      });
+      skillsEl.style.display = '';
+    } else {
+      skillsEl.style.display = 'none';
+    }
+  }
 }
 
 function updateNav(){
-  document.getElementById('nav-count').innerHTML =
-    `<b>${String(currentIndex + 1).padStart(2, '0')}</b> / ${String(MODELS.length).padStart(2, '0')}`;
-  document.getElementById('prev-btn').disabled = currentIndex === 0;
-  document.getElementById('next-btn').disabled = currentIndex === MODELS.length - 1;
+  const countEl = document.getElementById('nav-count');
+  if (countEl){
+    countEl.innerHTML = `<b>${String(currentIndex + 1).padStart(2, '0')}</b> / ${String(MODELS.length).padStart(2, '0')}`;
+  }
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  if (prevBtn) prevBtn.disabled = currentIndex === 0;
+  if (nextBtn) nextBtn.disabled = currentIndex === MODELS.length - 1;
 }
 
-document.getElementById('prev-btn').addEventListener('click', () => {
+document.getElementById('prev-btn')?.addEventListener('click', () => {
   if (currentIndex > 0) { currentIndex--; loadModel(currentIndex); controls.autoRotate = true; }
 });
-document.getElementById('next-btn').addEventListener('click', () => {
+document.getElementById('next-btn')?.addEventListener('click', () => {
   if (currentIndex < MODELS.length - 1) { currentIndex++; loadModel(currentIndex); controls.autoRotate = true; }
 });
 
